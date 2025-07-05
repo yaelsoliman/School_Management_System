@@ -32,6 +32,7 @@ namespace Infrastructure.Services.Courses
             {
                 _logger.LogInformation("AddCourseAsync started at {Time}", DateTime.Now);
                 var course = _mapper.Map<Course>(request);
+                course.CreatedByUserId = Guid.Parse(_currentUser.UserId);
                 await _unitOfWork.ExecuteTransactionAsync(async () => await _unitOfWork.CourseRepository.AddAsync(course), token);
 
                 _logger.LogInformation("Course with ID {CourseId} created successfully.", course.Id);
@@ -54,6 +55,8 @@ namespace Infrastructure.Services.Courses
                 var existCourse = await _unitOfWork.CourseRepository.FirstOrDefaultAsync(x => x.Id == request.Id);
                 if (existCourse is null)
                     return await ResponseWrapper<CourseDTO>.FailAsync("course not found");
+                if (existCourse.CreatedByUserId != Guid.Parse(_currentUser.UserId))
+                    return await ResponseWrapper<CourseDTO>.FailAsync("you cannot manage this course");
 
                 _mapper.Map(request, existCourse);
 
@@ -80,7 +83,10 @@ namespace Infrastructure.Services.Courses
 
                 var existCourse = await _unitOfWork.CourseRepository.FirstOrDefaultAsync(x => x.Id == courseId);
                 if (existCourse is null)
+                   
                     return await ResponseWrapper<CourseDTO>.FailAsync("course not found");
+                if (existCourse.CreatedByUserId != Guid.Parse(_currentUser.UserId))
+                    return await ResponseWrapper<CourseDTO>.FailAsync("you cannot manage this course");
 
                 await _unitOfWork.ExecuteTransactionAsync(() => _unitOfWork.CourseRepository.Delete(existCourse), token);
                 _logger.LogInformation("Course with ID {CourseId} deleted successfully.", existCourse.Id);
@@ -90,7 +96,7 @@ namespace Infrastructure.Services.Courses
                 return await ResponseWrapper<CourseDTO>.SuccessAsync(courseDeletedDto, "Course Deleted Successfully");
 
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while Removing the course ");
                 return await ResponseWrapper<CourseDTO>.FailAsync("An unexpected error occurred. Please try again later.");
@@ -159,7 +165,7 @@ namespace Infrastructure.Services.Courses
             catch (Exception ex)
             {
                 _logger.LogError(ex, "An error occurred while Get the courses");
-                return await ResponseWrapper< Pagination<CourseDTO>>.FailAsync("An unexpected error occurred. Please try again later.");
+                return await ResponseWrapper<Pagination<CourseDTO>>.FailAsync("An unexpected error occurred. Please try again later.");
             }
         }
     }

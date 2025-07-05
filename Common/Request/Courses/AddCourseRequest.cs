@@ -12,5 +12,6 @@ namespace Common.Request.Courses
 
         public DateOnly EndDate { get; set; }
 
+
     }
 }
